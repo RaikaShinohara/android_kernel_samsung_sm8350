@@ -1280,7 +1280,7 @@ static noinline int free_debug_processing(
 	struct kmem_cache_node *n = get_node(s, page_to_nid(page));
 	void *object = head;
 	int cnt = 0;
-	unsigned long uninitialized_var(flags);
+	unsigned long flags;
 	int ret = 0;
 
 #ifdef CONFIG_FASTUH_KDP
@@ -3115,7 +3115,7 @@ static void __slab_free(struct kmem_cache *s, struct page *page,
 	struct page new;
 	unsigned long counters;
 	struct kmem_cache_node *n = NULL;
-	unsigned long uninitialized_var(flags);
+	unsigned long flags;
 
 	stat(s, FREE_SLOWPATH);
 
@@ -6431,6 +6431,7 @@ static int sysfs_slab_alias(struct kmem_cache *s, const char *name)
 	return 0;
 }
 
+#ifdef CONFIG_SLUB_DEBUG
 #ifdef CONFIG_QCOM_MINIDUMP_PANIC_DUMP
 static ssize_t slab_owner_filter_write(struct file *file,
 					  const char __user *ubuf,
@@ -6512,7 +6513,8 @@ static const struct file_operations proc_slab_owner_handle_ops = {
 	.write	= slab_owner_handle_write,
 	.read	= slab_owner_handle_read,
 };
-#endif
+#endif /* CONFIG_QCOM_MINIDUMP_PANIC_DUMP */
+#endif /* CONFIG_SLUB_DEBUG */
 
 static int __init slab_sysfs_init(void)
 {
@@ -6557,6 +6559,7 @@ static int __init slab_sysfs_init(void)
 		kfree(al);
 	}
 
+#ifdef CONFIG_SLUB_DEBUG
 #ifdef CONFIG_QCOM_MINIDUMP_PANIC_DUMP
 	if (slub_debug) {
 		int i;
@@ -6571,6 +6574,7 @@ static int __init slab_sysfs_init(void)
 				set_bit(i, &slab_owner_filter);
 		}
 	}
+#endif
 #endif
 	mutex_unlock(&slab_mutex);
 	resiliency_test();
