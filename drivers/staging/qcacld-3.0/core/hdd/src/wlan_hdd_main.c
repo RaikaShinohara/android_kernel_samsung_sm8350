@@ -85,7 +85,7 @@
 #include <linux/ethtool.h>
 
 #if defined (SEC_READ_MACADDR_SYSFS) || defined (SEC_WRITE_VERSION_IN_SYSFS) || defined (SEC_WRITE_SOFTAP_INFO_IN_SYSFS) || defined (SEC_CONFIG_PSM_SYSFS)
-#ifdef CONFIG_LITHIUM
+#if defined(CONFIG_LITHIUM) || IS_ENABLED(CONFIG_CNSS2)
 #include <net/cnss2.h>
 #else
 #include <soc/qcom/icnss2.h>
