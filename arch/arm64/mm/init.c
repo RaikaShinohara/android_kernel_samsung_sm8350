@@ -692,6 +692,15 @@ void __init mem_init(void)
 
 void free_initmem(void)
 {
+	/*
+	 * r9q: zeroing .init through the linear map (free_reserved_area
+	 * memset) hangs the SoC until the non-secure watchdog bites
+	 * (TZBSP_ERR_FATAL_NON_SECURE_WDT). Keep it allocated until the cause
+	 * is found, it is only ~2 MB.
+	 */
+	if (IS_ENABLED(CONFIG_SEC_R9Q_PROJECT))
+		return;
+
 	free_reserved_area(lm_alias(__init_begin),
 			   lm_alias(__init_end),
 			   0, "unused kernel");
