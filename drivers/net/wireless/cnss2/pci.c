@@ -2891,6 +2891,19 @@ int cnss_wlan_register_driver(struct cnss_wlan_driver *driver_ops)
 	 */
 	if (test_bit(CNSS_IN_COLD_BOOT_CAL, &plat_priv->driver_state)) {
 		cnss_pr_dbg("Start to wait for calibration to complete\n");
+	} else if (IS_ENABLED(CONFIG_SEC_R9Q_PROJECT)) {
+		/* r9q: init loads qcacld on boot, which can be before fs_ready
+		 * starts the cold boot calibration: wait for it to finish and
+		 * only reject the driver if it times out.
+		 */
+		cnss_pr_dbg("Wait for calibration to start and complete\n");
+		timeout = cnss_get_timeout(plat_priv, CNSS_TIMEOUT_CALIBRATION);
+		if (!wait_for_completion_timeout(&plat_priv->cal_complete,
+						 msecs_to_jiffies(timeout))) {
+			cnss_pr_err("Reject WLAN Driver insmod before CBC\n");
+			return -EPERM;
+		}
+		goto register_driver;
 	} else {
 		cnss_pr_err("Reject WLAN Driver insmod before CBC\n");
 		return -EPERM;
