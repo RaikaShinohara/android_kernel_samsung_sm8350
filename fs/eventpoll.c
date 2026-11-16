@@ -2366,7 +2366,71 @@ SYSCALL_DEFINE6(epoll_pwait, int, epfd, struct epoll_event __user *, events,
 	return error;
 }
 
+/*
+ * epoll_pwait2 backport (Linux 5.11), used by BLASTBufferQueue on Android 16.
+ * ep_poll on 5.4 works in milliseconds, so the timeout is rounded up.
+ */
+static int epoll_timespec_to_ms(const struct __kernel_timespec __user *timeout)
+{
+	struct timespec64 ts;
+	s64 ms;
+
+	if (!timeout)
+		return -1;
+	if (get_timespec64(&ts, timeout))
+		return -EFAULT;
+	if (!timespec64_valid(&ts))
+		return -EINVAL;
+
+	ms = ts.tv_sec * MSEC_PER_SEC + DIV_ROUND_UP(ts.tv_nsec, NSEC_PER_MSEC);
+	return ms > INT_MAX ? INT_MAX : (int)ms;
+}
+
+SYSCALL_DEFINE6(epoll_pwait2, int, epfd, struct epoll_event __user *, events,
+		int, maxevents, const struct __kernel_timespec __user *, timeout,
+		const sigset_t __user *, sigmask, size_t, sigsetsize)
+{
+	int error, ms;
+
+	ms = epoll_timespec_to_ms(timeout);
+	if (ms < -1)
+		return ms;
+
+	error = set_user_sigmask(sigmask, sigsetsize);
+	if (error)
+		return error;
+
+	error = do_epoll_wait(epfd, events, maxevents, ms);
+	restore_saved_sigmask_unless(error == -EINTR);
+
+	return error;
+}
+
 #ifdef CONFIG_COMPAT
+COMPAT_SYSCALL_DEFINE6(epoll_pwait2, int, epfd,
+			struct epoll_event __user *, events,
+			int, maxevents,
+			const struct __kernel_timespec __user *, timeout,
+			const compat_sigset_t __user *, sigmask,
+			compat_size_t, sigsetsize)
+{
+	long err;
+	int ms;
+
+	ms = epoll_timespec_to_ms(timeout);
+	if (ms < -1)
+		return ms;
+
+	err = set_compat_user_sigmask(sigmask, sigsetsize);
+	if (err)
+		return err;
+
+	err = do_epoll_wait(epfd, events, maxevents, ms);
+	restore_saved_sigmask_unless(err == -EINTR);
+
+	return err;
+}
+
 COMPAT_SYSCALL_DEFINE6(epoll_pwait, int, epfd,
 			struct epoll_event __user *, events,
 			int, maxevents, int, timeout,
